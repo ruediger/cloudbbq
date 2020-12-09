@@ -1,0 +1,17 @@
+[package]
+name = "cloudbbq2-rs"
+version = "0.1.0"
+authors = ["Rüdiger Sonderfeld <ruediger@c-plusplus.net>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bluez-generated = { version = "0.2.0" }
+dbus = { version = "0.9.0", features = ["futures"] }
+dbus-tokio = "0.6.0"
+futures = "0.3.7"
+itertools = "0.9.0"
+log = "0.4.11"
+thiserror = "1.0.22"
+tokio = "0.2.22"
