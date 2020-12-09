@@ -1,3 +1,13 @@
+// Copied from https://github.com/alsuren/mijia-homie/blob/cd1af40dcee96ca184e05dbfa70943e6c88637a5/mijia/src/bluetooth.rs
+// Licensed under either of
+//
+//  -  Apache License, Version 2.0 (LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0)
+//  -  MIT license (LICENSE-MIT or http://opensource.org/licenses/MIT)
+//
+// at your option.
+
+// (TODO: Move into a library. Talk to mijia-homie devs about that)
+
 #![allow(dead_code)]  // TODO: remove
 
 use bluez_generated::{OrgBluezAdapter1, OrgBluezDevice1, OrgBluezGattCharacteristic1};
