@@ -92,6 +92,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // println!("SERVICES {:?}", services);
     // println!("CHARACTERISTICS {:?}", characteristics);
 
+    // time::delay_for(SCAN_DURATION).await;
+
     if let Some(_service_path) = services.get(&BBQ_SERVICE_UUID) {
         if let Some(characteristic) = characteristics.get(&ACCOUNT_AND_VERIFY_UUID) {
             println!("PATH: {}", characteristic.path);
