@@ -12,8 +12,9 @@ const SCAN_DURATION: Duration = Duration::from_secs(5);
 const BBQ_SERVICE_UUID: Uuid = uuid_from_u16(0xFFF0);
 const ACCOUNT_AND_VERIFY_UUID: Uuid = uuid_from_u16(0xFFF2);
 
-const CREDENTIAL_MSG : [u8; 15] = [0x21, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0xb8, 0x22, 0x00, 0x00, 0x00, 0x00, 0x00];
-
+const CREDENTIAL_MSG: [u8; 15] = [
+    0x21, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0xb8, 0x22, 0x00, 0x00, 0x00, 0x00, 0x00,
+];
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -21,8 +22,10 @@ pub enum Error {
     NoDeviceFound,
 }
 
-pub async fn find_device(bt_session: &BluetoothSession, name: String)
-                         -> Result<DeviceInfo, Box<dyn std::error::Error>> {
+pub async fn find_device(
+    bt_session: &BluetoothSession,
+    name: String,
+) -> Result<DeviceInfo, Box<dyn std::error::Error>> {
     bt_session.start_discovery().await?;
     time::sleep(SCAN_DURATION).await;
 
