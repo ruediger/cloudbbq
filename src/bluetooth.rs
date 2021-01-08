@@ -13,6 +13,7 @@
 use backoff::future::retry;
 use backoff::ExponentialBackoff;
 use bluez_generated::{OrgBluezAdapter1, OrgBluezDevice1, OrgBluezGattCharacteristic1};
+use dbus_tokio::connection::IOResourceError;
 use core::fmt::Debug;
 use core::future::Future;
 use dbus::arg::{RefArg, Variant};
@@ -21,7 +22,6 @@ use dbus::nonblock::{Proxy, SyncConnection};
 use futures::{FutureExt, TryFutureExt};
 use itertools::Itertools;
 use std::collections::HashMap;
-use std::error::Error;
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 use std::sync::Arc;
@@ -47,7 +47,7 @@ pub enum BluetoothError {
 #[derive(Error, Debug)]
 pub enum SpawnError {
     #[error("D-Bus connection lost: {0}")]
-    DbusConnectionLost(#[source] Box<dyn Error + Send + Sync>),
+    DbusConnectionLost(#[source] IOResourceError),
     #[error("Task failed: {0}")]
     Join(#[from] JoinError),
 }
