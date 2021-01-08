@@ -16,6 +16,8 @@ const CREDENTIAL_MSG: [u8; 15] = [
     0x21, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0xb8, 0x22, 0x00, 0x00, 0x00, 0x00, 0x00,
 ];
 
+const DEVICE_NAMES: [&str; 2] = ["BBQ", "iBBQ"];
+
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("No device was found")]
@@ -24,14 +26,13 @@ pub enum Error {
 
 pub async fn find_device(
     bt_session: &BluetoothSession,
-    name: String,
 ) -> Result<DeviceInfo, Box<dyn std::error::Error>> {
     bt_session.start_discovery().await?;
     time::sleep(SCAN_DURATION).await;
 
     let devices = bt_session.get_devices().await?;
     for device in devices.into_iter() {
-        if device.name.as_ref() == Some(&name) {
+        if matches!(&device.name, Some(name) if DEVICE_NAMES.contains(&name.as_str())) {
             return Ok(device);
         }
     }
@@ -41,7 +42,7 @@ pub async fn find_device(
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (_, bt_session) = BluetoothSession::new().await?;
-    let device_info = find_device(&bt_session, "BBQ".to_string()).await?;
+    let device_info = find_device(&bt_session).await?;
     println!("FOUND: {:?}", device_info);
     bt_session.connect(&device_info.id).await?;
     time::sleep(SCAN_DURATION).await;
