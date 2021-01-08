@@ -1,5 +1,3 @@
-#![allow(dead_code)]  // TODO: remove
-
 use bluez_async::{uuid_from_u16, BluetoothSession, DeviceInfo};
 use std::time::Duration;
 use thiserror::Error;
