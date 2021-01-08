@@ -30,7 +30,7 @@ pub enum Error {
 pub async fn find_device(bt_session: &BluetoothSession, name: String)
                          -> Result<DeviceInfo, Box<dyn std::error::Error>> {
     bt_session.start_discovery().await?;
-    time::delay_for(SCAN_DURATION).await;
+    time::sleep(SCAN_DURATION).await;
 
     let devices = bt_session.get_devices().await?;
     for device in devices.into_iter() {
@@ -54,7 +54,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let device_info = find_device(&bt_session, "BBQ".to_string()).await?;
     println!("FOUND: {:?}", device_info);
     bt_session.connect(&device_info.id).await?;
-    time::delay_for(SCAN_DURATION).await;
+    time::sleep(SCAN_DURATION).await;
 
     let bluez_root = Proxy::new(
         "org.bluez",
