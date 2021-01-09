@@ -1,4 +1,4 @@
-use bluez_async::{uuid_from_u16, BluetoothSession, DeviceInfo};
+use bluez_async::{uuid_from_u16, BluetoothError, BluetoothSession, DeviceInfo};
 use std::time::Duration;
 use thiserror::Error;
 use tokio::time;
@@ -20,11 +20,12 @@ const DEVICE_NAMES: [&str; 2] = ["BBQ", "iBBQ"];
 pub enum Error {
     #[error("No device was found")]
     NoDeviceFound,
+    /// There was an error communicating over Bluetooth.
+    #[error(transparent)]
+    Bluetooth(#[from] BluetoothError),
 }
 
-pub async fn find_device(
-    bt_session: &BluetoothSession,
-) -> Result<DeviceInfo, Box<dyn std::error::Error>> {
+pub async fn find_device(bt_session: &BluetoothSession) -> Result<DeviceInfo, Error> {
     bt_session.start_discovery().await?;
     time::sleep(SCAN_DURATION).await;
 
@@ -34,7 +35,7 @@ pub async fn find_device(
             return Ok(device);
         }
     }
-    Err(Box::new(Error::NoDeviceFound))
+    Err(Error::NoDeviceFound)
 }
 
 #[tokio::main]
