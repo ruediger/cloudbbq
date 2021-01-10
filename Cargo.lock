@@ -71,6 +71,7 @@ name = "cloudbbq2-rs"
 version = "0.1.0"
 dependencies = [
  "bluez-async",
+ "futures",
  "log",
  "thiserror",
  "tokio",
