@@ -20,5 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     device
         .set_temperature_unit(TemperatureUnit::Celcius)
         .await?;
+
+    device.set_target_temp(0, 35.0).await?;
     Ok(())
 }
