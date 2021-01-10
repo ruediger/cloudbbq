@@ -1,6 +1,11 @@
 use bluez_async::{
-    uuid_from_u16, BluetoothError, BluetoothSession, CharacteristicId, DeviceId, DeviceInfo,
+    uuid_from_u16, BluetoothError, BluetoothEvent, BluetoothSession, CharacteristicEvent,
+    CharacteristicId, DeviceId, DeviceInfo,
 };
+use futures::future;
+use futures::stream::{Stream, StreamExt};
+use log::info;
+use std::convert::TryInto;
 use std::ops::Range;
 use std::time::Duration;
 use thiserror::Error;
@@ -24,11 +29,13 @@ const CREDENTIAL_MSG: [u8; 15] = [
 // Possible values for the first byte of 'setting data'.
 const SET_TARGET_TEMP_COMMAND: u8 = 0x01;
 const SET_UNIT_COMMAND: u8 = 0x02;
+const REAL_TIME_DATA_COMMAND: u8 = 0x0B;
 
 const UNITS_CELCIUS_ARGUMENT: u8 = 0x00;
 const UNITS_FAHRENHEIT_ARGUMENT: u8 = 0x01;
 
 // Special temperature values.
+const ABSENT_PROBE_VALUE: f32 = -1.0;
 const TARGET_TEMP_NONE: f32 = -300.0;
 const TEMPERATURE_MAX: f32 = i16::MAX as f32 / 10.0;
 const TEMPERATURE_MIN: f32 = i16::MIN as f32 / 10.0;
@@ -157,6 +164,41 @@ impl BBQDevice {
     pub async fn set_target_temp(&self, probe: u8, target: f32) -> Result<(), Error> {
         self.set_target_range(probe, TARGET_TEMP_NONE..target).await
     }
+
+    /// Enable or disable the device from sending real-time temperature data from its probes.
+    pub async fn enable_real_time_data(&self, enable: bool) -> Result<(), BluetoothError> {
+        let argument = if enable { 0x01 } else { 0x00 };
+        let command = [REAL_TIME_DATA_COMMAND, argument, 0, 0, 0, 0];
+        self.bt_session
+            .write_characteristic_value(&self.setting_data_characteristic, command)
+            .await
+    }
+
+    /// Get a stream of real time data from the device.
+    ///
+    /// You must also call `enable_real_time_data(true)` to actually get some data.
+    pub async fn real_time(&self) -> Result<impl Stream<Item = RealTimeData>, BluetoothError> {
+        let real_time_data_characteristic = self.real_time_data_characteristic.clone();
+        self.bt_session
+            .start_notify(&real_time_data_characteristic)
+            .await?;
+        let events = self
+            .bt_session
+            .characteristic_event_stream(&real_time_data_characteristic)
+            .await?;
+        Ok(StreamExt::filter_map(events, move |event| {
+            future::ready(match event {
+                BluetoothEvent::Characteristic {
+                    id,
+                    event: CharacteristicEvent::Value { value },
+                } if id == real_time_data_characteristic => RealTimeData::try_parse(&value),
+                _ => {
+                    info!("Unexpected Bluetooth event {:?}", event);
+                    None
+                }
+            })
+        }))
+    }
 }
 
 /// The temperature unit which the thermometer uses for its display.
@@ -168,10 +210,41 @@ pub enum TemperatureUnit {
     Fahrenheit,
 }
 
+#[derive(Clone, Debug)]
+pub struct RealTimeData {
+    /// The current temperature of each probe in Celcius, or None if the probe is disconnected.
+    probe_temperatures: Vec<Option<f32>>,
+}
+
+impl RealTimeData {
+    pub fn try_parse(value: &[u8]) -> Option<RealTimeData> {
+        if value.len() % 2 != 0 {
+            return None;
+        }
+        Some(RealTimeData {
+            probe_temperatures: value
+                .chunks_exact(2)
+                .map(|bytes| {
+                    let temperature = decode_temperature(bytes.try_into().unwrap());
+                    if temperature == ABSENT_PROBE_VALUE {
+                        None
+                    } else {
+                        Some(temperature)
+                    }
+                })
+                .collect(),
+        })
+    }
+}
+
 fn encode_temperature(temperature: f32) -> Result<[u8; 2], Error> {
     if temperature < TEMPERATURE_MIN || temperature > TEMPERATURE_MAX {
         return Err(Error::TemperatureEncodingError(temperature));
     }
     let temperature_fixed = (temperature * 10.0) as i16;
     Ok(temperature_fixed.to_le_bytes())
+}
+
+fn decode_temperature(bytes: [u8; 2]) -> f32 {
+    i16::from_le_bytes(bytes) as f32 / 10.0
 }
