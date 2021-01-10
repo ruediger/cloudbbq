@@ -1,5 +1,5 @@
 use bluez_async::BluetoothSession;
-use cloudbbq2_rs::{authenticate, find_device};
+use cloudbbq2_rs::{find_device, BBQDevice};
 use std::time::Duration;
 use tokio::time;
 
@@ -13,6 +13,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     bt_session.connect(&device_info.id).await?;
     time::sleep(WAIT_DURATION).await;
 
-    authenticate(&bt_session, &device_info.id).await?;
+    let device = BBQDevice::new(bt_session, device_info.id).await?;
+    device.authenticate().await?;
     Ok(())
 }
