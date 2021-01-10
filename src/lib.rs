@@ -30,9 +30,15 @@ const CREDENTIAL_MSG: [u8; 15] = [
 const SET_TARGET_TEMP_COMMAND: u8 = 0x01;
 const SET_UNIT_COMMAND: u8 = 0x02;
 const REAL_TIME_DATA_COMMAND: u8 = 0x0B;
+const REQUEST_PROPERTY_COMMAND: u8 = 0x08;
 
 const UNITS_CELCIUS_ARGUMENT: u8 = 0x00;
 const UNITS_FAHRENHEIT_ARGUMENT: u8 = 0x01;
+
+// Possible values for the first byte of the 'setting result'.
+const SILENCE_PRESSED: u8 = 0x04;
+const BATTERY_LEVEL_PROPERTY_ID: u8 = 0x24;
+const ACKNOWLEDGE_COMMAND: u8 = 0xFF;
 
 // Special temperature values.
 const ABSENT_PROBE_VALUE: f32 = -1.0;
@@ -174,6 +180,22 @@ impl BBQDevice {
             .await
     }
 
+    /// Request that the device report its current battery level. The result will come as a
+    /// `SettingResult` event.
+    pub async fn request_battery_level(&self) -> Result<(), BluetoothError> {
+        let command = [
+            REQUEST_PROPERTY_COMMAND,
+            BATTERY_LEVEL_PROPERTY_ID,
+            0,
+            0,
+            0,
+            0,
+        ];
+        self.bt_session
+            .write_characteristic_value(&self.setting_data_characteristic, command)
+            .await
+    }
+
     /// Get a stream of real time data from the device.
     ///
     /// You must also call `enable_real_time_data(true)` to actually get some data.
@@ -192,6 +214,33 @@ impl BBQDevice {
                     id,
                     event: CharacteristicEvent::Value { value },
                 } if id == real_time_data_characteristic => RealTimeData::try_parse(&value),
+                _ => {
+                    info!("Unexpected Bluetooth event {:?}", event);
+                    None
+                }
+            })
+        }))
+    }
+
+    /// Get a stream of setting results from the device. This includes responses to commands,
+    /// battery level notifications, and notifications that the alarm has been silenced.
+    pub async fn setting_results(
+        &self,
+    ) -> Result<impl Stream<Item = SettingResult>, BluetoothError> {
+        let setting_result_characteristic = self.setting_result_characteristic.clone();
+        self.bt_session
+            .start_notify(&setting_result_characteristic)
+            .await?;
+        let events = self
+            .bt_session
+            .characteristic_event_stream(&setting_result_characteristic)
+            .await?;
+        Ok(StreamExt::filter_map(events, move |event| {
+            future::ready(match event {
+                BluetoothEvent::Characteristic {
+                    id,
+                    event: CharacteristicEvent::Value { value },
+                } if id == setting_result_characteristic => SettingResult::try_parse(&value),
                 _ => {
                     info!("Unexpected Bluetooth event {:?}", event);
                     None
@@ -234,6 +283,48 @@ impl RealTimeData {
                 })
                 .collect(),
         })
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum SettingResult {
+    /// A confirmation that the given command has been received.
+    AcknowledgeCommand { command_id: u8 },
+    /// The current battery level of the device.
+    BatteryLevel {
+        current_voltage: u16,
+        max_voltage: u16,
+    },
+    /// A notification that the button on the device has been pressed to stop the target temperature
+    /// alarm sounding.
+    SilencePressed,
+}
+
+impl SettingResult {
+    pub fn try_parse(value: &[u8]) -> Option<SettingResult> {
+        if value.len() != 6 {
+            return None;
+        }
+        match value[0] {
+            ACKNOWLEDGE_COMMAND => {
+                assert!(value[2..] == [0, 0, 0, 0]);
+                Some(SettingResult::AcknowledgeCommand {
+                    command_id: value[1],
+                })
+            }
+            BATTERY_LEVEL_PROPERTY_ID => Some(SettingResult::BatteryLevel {
+                current_voltage: u16::from_le_bytes(value[1..=2].try_into().unwrap()),
+                max_voltage: u16::from_le_bytes(value[3..=4].try_into().unwrap()),
+            }),
+            SILENCE_PRESSED => {
+                assert!(value[1..] == [0xFF, 0, 0, 0, 0]);
+                Some(SettingResult::SilencePressed)
+            }
+            _ => {
+                info!("Unrecognised setting result: {:?}", value);
+                None
+            }
+        }
     }
 }
 

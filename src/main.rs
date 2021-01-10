@@ -1,5 +1,6 @@
 use bluez_async::BluetoothSession;
 use cloudbbq2_rs::{find_device, BBQDevice, TemperatureUnit};
+use futures::select;
 use futures::stream::StreamExt;
 use std::time::Duration;
 use tokio::time;
@@ -17,6 +18,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let device = BBQDevice::new(bt_session, device_info.id).await?;
     device.authenticate().await?;
 
+    let mut setting_results = device.setting_results().await?.fuse();
+    device.request_battery_level().await?;
+
     println!("Setting unit");
     device
         .set_temperature_unit(TemperatureUnit::Celcius)
@@ -24,12 +28,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     device.set_target_temp(0, 35.0).await?;
 
-    let mut real_time_data = device.real_time().await?;
+    let mut real_time_data = device.real_time().await?.fuse();
     device.enable_real_time_data(true).await?;
 
     println!("Events:");
-    while let Some(data) = real_time_data.next().await {
-        println!("Realtime data: {:?}", data);
+    loop {
+        select! {
+            data = real_time_data.select_next_some() => println!("Realtime data: {:?}", data),
+            result = setting_results.select_next_some() => println!("Setting result: {:?}", result),
+            complete => break,
+        };
     }
 
     Ok(())
