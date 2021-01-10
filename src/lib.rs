@@ -50,8 +50,6 @@ const DEVICE_NAMES: [&str; 2] = ["BBQ", "iBBQ"];
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("No device was found")]
-    NoDeviceFound,
     /// The given temperature could not be encoded because it is too high or too low.
     #[error("Temperature {0} out of range")]
     TemperatureEncodingError(f32),
@@ -60,17 +58,17 @@ pub enum Error {
     Bluetooth(#[from] BluetoothError),
 }
 
-pub async fn find_device(bt_session: &BluetoothSession) -> Result<DeviceInfo, Error> {
+pub async fn find_devices(bt_session: &BluetoothSession) -> Result<Vec<DeviceInfo>, Error> {
     bt_session.start_discovery().await?;
     time::sleep(SCAN_DURATION).await;
 
     let devices = bt_session.get_devices().await?;
-    for device in devices.into_iter() {
-        if matches!(&device.name, Some(name) if DEVICE_NAMES.contains(&name.as_str())) {
-            return Ok(device);
-        }
-    }
-    Err(Error::NoDeviceFound)
+    Ok(devices
+        .into_iter()
+        .filter(
+            |device| matches!(&device.name, Some(name) if DEVICE_NAMES.contains(&name.as_str())),
+        )
+        .collect())
 }
 
 /// A Bluetooth BBQ thermometer device which is connected.

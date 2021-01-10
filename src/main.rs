@@ -1,5 +1,5 @@
 use bluez_async::BluetoothSession;
-use cloudbbq2_rs::{find_device, BBQDevice, TemperatureUnit};
+use cloudbbq2_rs::{find_devices, BBQDevice, TemperatureUnit};
 use futures::select;
 use futures::stream::StreamExt;
 use std::time::Duration;
@@ -10,12 +10,17 @@ const WAIT_DURATION: Duration = Duration::from_secs(5);
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (_, bt_session) = BluetoothSession::new().await?;
-    let device_info = find_device(&bt_session).await?;
-    println!("FOUND: {:?}", device_info);
-    bt_session.connect(&device_info.id).await?;
+    let devices = find_devices(&bt_session).await?;
+    if devices.is_empty() {
+        println!("No devices found");
+        return Ok(());
+    }
+    println!("FOUND: {:?}", devices);
+    let device_id = devices[0].id.clone();
+    bt_session.connect(&device_id).await?;
     time::sleep(WAIT_DURATION).await;
 
-    let device = BBQDevice::new(bt_session, device_info.id).await?;
+    let device = BBQDevice::new(bt_session, device_id).await?;
     device.authenticate().await?;
 
     let mut setting_results = device.setting_results().await?.fuse();
