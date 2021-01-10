@@ -1,6 +1,7 @@
 use bluez_async::{
     uuid_from_u16, BluetoothError, BluetoothSession, CharacteristicId, DeviceId, DeviceInfo,
 };
+use std::ops::Range;
 use std::time::Duration;
 use thiserror::Error;
 use tokio::time;
@@ -21,10 +22,16 @@ const CREDENTIAL_MSG: [u8; 15] = [
 ];
 
 // Possible values for the first byte of 'setting data'.
+const SET_TARGET_TEMP_COMMAND: u8 = 0x01;
 const SET_UNIT_COMMAND: u8 = 0x02;
 
 const UNITS_CELCIUS_ARGUMENT: u8 = 0x00;
 const UNITS_FAHRENHEIT_ARGUMENT: u8 = 0x01;
+
+// Special temperature values.
+const TARGET_TEMP_NONE: f32 = -300.0;
+const TEMPERATURE_MAX: f32 = i16::MAX as f32 / 10.0;
+const TEMPERATURE_MIN: f32 = i16::MIN as f32 / 10.0;
 
 const DEVICE_NAMES: [&str; 2] = ["BBQ", "iBBQ"];
 
@@ -32,6 +39,9 @@ const DEVICE_NAMES: [&str; 2] = ["BBQ", "iBBQ"];
 pub enum Error {
     #[error("No device was found")]
     NoDeviceFound,
+    /// The given temperature could not be encoded because it is too high or too low.
+    #[error("Temperature {0} out of range")]
+    TemperatureEncodingError(f32),
     /// There was an error communicating over Bluetooth.
     #[error(transparent)]
     Bluetooth(#[from] BluetoothError),
@@ -122,6 +132,31 @@ impl BBQDevice {
             .write_characteristic_value(&self.setting_data_characteristic, command)
             .await
     }
+
+    /// Set the desired temperature range for the given temperature probe. If the temperature goes
+    /// outside the given range then the device will sound an alarm.
+    async fn set_target_range(&self, probe: u8, range: Range<f32>) -> Result<(), Error> {
+        let bottom_bytes = encode_temperature(range.start)?;
+        let top_bytes = encode_temperature(range.end)?;
+        let value = [
+            SET_TARGET_TEMP_COMMAND,
+            probe,
+            bottom_bytes[0],
+            bottom_bytes[1],
+            top_bytes[0],
+            top_bytes[1],
+        ];
+        self.bt_session
+            .write_characteristic_value(&self.setting_data_characteristic, value)
+            .await?;
+        Ok(())
+    }
+
+    /// Set the target temperature for the given temperature probe. Once the temperature goes above
+    /// the given value the device will sound an alarm.
+    pub async fn set_target_temp(&self, probe: u8, target: f32) -> Result<(), Error> {
+        self.set_target_range(probe, TARGET_TEMP_NONE..target).await
+    }
 }
 
 /// The temperature unit which the thermometer uses for its display.
@@ -131,4 +166,12 @@ pub enum TemperatureUnit {
     Celcius,
     /// ºF
     Fahrenheit,
+}
+
+fn encode_temperature(temperature: f32) -> Result<[u8; 2], Error> {
+    if temperature < TEMPERATURE_MIN || temperature > TEMPERATURE_MAX {
+        return Err(Error::TemperatureEncodingError(temperature));
+    }
+    let temperature_fixed = (temperature * 10.0) as i16;
+    Ok(temperature_fixed.to_le_bytes())
 }
