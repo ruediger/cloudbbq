@@ -20,6 +20,12 @@ const CREDENTIAL_MSG: [u8; 15] = [
     0x21, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0xb8, 0x22, 0x00, 0x00, 0x00, 0x00, 0x00,
 ];
 
+// Possible values for the first byte of 'setting data'.
+const SET_UNIT_COMMAND: u8 = 0x02;
+
+const UNITS_CELCIUS_ARGUMENT: u8 = 0x00;
+const UNITS_FAHRENHEIT_ARGUMENT: u8 = 0x01;
+
 const DEVICE_NAMES: [&str; 2] = ["BBQ", "iBBQ"];
 
 #[derive(Debug, Error)]
@@ -103,4 +109,26 @@ impl BBQDevice {
             .write_characteristic_value(&self.account_and_verify_characteristic, CREDENTIAL_MSG)
             .await
     }
+
+    /// Configure which temperature unit the device will use for its display. This does not affect
+    /// the Bluetooth interface.
+    pub async fn set_temperature_unit(&self, unit: TemperatureUnit) -> Result<(), BluetoothError> {
+        let argument = match unit {
+            TemperatureUnit::Celcius => UNITS_CELCIUS_ARGUMENT,
+            TemperatureUnit::Fahrenheit => UNITS_FAHRENHEIT_ARGUMENT,
+        };
+        let command = [SET_UNIT_COMMAND, argument, 0, 0, 0, 0];
+        self.bt_session
+            .write_characteristic_value(&self.setting_data_characteristic, command)
+            .await
+    }
+}
+
+/// The temperature unit which the thermometer uses for its display.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TemperatureUnit {
+    /// ºC
+    Celcius,
+    /// ºF
+    Fahrenheit,
 }

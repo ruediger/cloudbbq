@@ -1,5 +1,5 @@
 use bluez_async::BluetoothSession;
-use cloudbbq2_rs::{find_device, BBQDevice};
+use cloudbbq2_rs::{find_device, BBQDevice, TemperatureUnit};
 use std::time::Duration;
 use tokio::time;
 
@@ -15,5 +15,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let device = BBQDevice::new(bt_session, device_info.id).await?;
     device.authenticate().await?;
+
+    println!("Setting unit");
+    device
+        .set_temperature_unit(TemperatureUnit::Celcius)
+        .await?;
     Ok(())
 }
