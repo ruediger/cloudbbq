@@ -338,3 +338,65 @@ fn encode_temperature(temperature: f32) -> Result<[u8; 2], Error> {
 fn decode_temperature(bytes: [u8; 2]) -> f32 {
     i16::from_le_bytes(bytes) as f32 / 10.0
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_real_time_invalid() {
+        assert_eq!(RealTimeData::try_parse(&[0]), None);
+    }
+
+    #[test]
+    fn parse_real_time_no_probes() {
+        assert_eq!(
+            RealTimeData::try_parse(&[0xF6, 0xFF, 0xF6, 0xFF]),
+            Some(RealTimeData {
+                probe_temperatures: vec![None, None]
+            })
+        );
+    }
+
+    #[test]
+    fn parse_real_time() {
+        assert_eq!(
+            RealTimeData::try_parse(&[1, 2, 3, 4]),
+            Some(RealTimeData {
+                probe_temperatures: vec![Some(51.3), Some(102.7)]
+            })
+        );
+    }
+
+    #[test]
+    fn parse_setting_result_invalid() {
+        assert_eq!(SettingResult::try_parse(&[]), None);
+    }
+
+    #[test]
+    fn parse_setting_result_acknowledge() {
+        assert_eq!(
+            SettingResult::try_parse(&[0xFF, 0x02, 0x00, 0x00, 0x00, 0x00]),
+            Some(SettingResult::AcknowledgeCommand { command_id: 0x02 })
+        );
+    }
+
+    #[test]
+    fn parse_setting_result_battery_level() {
+        assert_eq!(
+            SettingResult::try_parse(&[0x24, 0x5B, 0x17, 0x96, 0x19, 0x00]),
+            Some(SettingResult::BatteryLevel {
+                current_voltage: 5979,
+                max_voltage: 6550
+            })
+        );
+    }
+
+    #[test]
+    fn parse_setting_result_silence_pressed() {
+        assert_eq!(
+            SettingResult::try_parse(&[0x04, 0xFF, 0x00, 0x00, 0x00, 0x00]),
+            Some(SettingResult::SilencePressed)
+        );
+    }
+}
