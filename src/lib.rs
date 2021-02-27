@@ -257,11 +257,11 @@ pub enum TemperatureUnit {
 #[derive(Clone, Debug)]
 pub struct RealTimeData {
     /// The current temperature of each probe in Celcius, or None if the probe is disconnected.
-    probe_temperatures: Vec<Option<f32>>,
+    pub probe_temperatures: Vec<Option<f32>>,
 }
 
 impl RealTimeData {
-    pub fn try_parse(value: &[u8]) -> Option<RealTimeData> {
+    fn try_parse(value: &[u8]) -> Option<RealTimeData> {
         if value.len() % 2 != 0 {
             return None;
         }
@@ -296,7 +296,7 @@ pub enum SettingResult {
 }
 
 impl SettingResult {
-    pub fn try_parse(value: &[u8]) -> Option<SettingResult> {
+    fn try_parse(value: &[u8]) -> Option<SettingResult> {
         if value.len() != 6 {
             return None;
         }
