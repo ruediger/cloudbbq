@@ -5,11 +5,14 @@ use futures::stream::StreamExt;
 use std::time::Duration;
 use tokio::time;
 
+const SCAN_DURATION: Duration = Duration::from_secs(5);
 const WAIT_DURATION: Duration = Duration::from_secs(5);
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (_, bt_session) = BluetoothSession::new().await?;
+    bt_session.start_discovery().await?;
+    time::sleep(SCAN_DURATION).await;
     let devices = find_devices(&bt_session).await?;
     if devices.is_empty() {
         println!("No devices found");
