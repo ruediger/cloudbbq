@@ -7,12 +7,8 @@ use futures::stream::{Stream, StreamExt};
 use log::info;
 use std::convert::TryInto;
 use std::ops::Range;
-use std::time::Duration;
 use thiserror::Error;
-use tokio::time;
 use uuid::Uuid;
-
-const SCAN_DURATION: Duration = Duration::from_secs(5);
 
 // https://gist.github.com/uucidl/b9c60b6d36d8080d085a8e3310621d64
 const BBQ_SERVICE_UUID: Uuid = uuid_from_u16(0xFFF0);
@@ -58,16 +54,12 @@ pub enum Error {
     Bluetooth(#[from] BluetoothError),
 }
 
+/// Return all compatible BBQ thermometer devices currently known by the system.
 pub async fn find_devices(bt_session: &BluetoothSession) -> Result<Vec<DeviceInfo>, Error> {
-    bt_session.start_discovery().await?;
-    time::sleep(SCAN_DURATION).await;
-
     let devices = bt_session.get_devices().await?;
     Ok(devices
         .into_iter()
-        .filter(
-            |device| matches!(&device.name, Some(name) if DEVICE_NAMES.contains(&name.as_str())),
-        )
+        .filter(BBQDevice::is_compatible)
         .collect())
 }
 
@@ -83,6 +75,11 @@ pub struct BBQDevice {
 }
 
 impl BBQDevice {
+    /// Return whether the given Bluetooth device is a compatible BBQ thermometer.
+    pub fn is_compatible(device: &DeviceInfo) -> bool {
+        matches!(&device.name, Some(name) if DEVICE_NAMES.contains(&name.as_str()))
+    }
+
     /// Construct a new BBQDevice wrapper around an appropriate Bluetooth device which is already
     /// connected.
     pub async fn new(
