@@ -25,9 +25,9 @@ checksum = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
 
 [[package]]
 name = "bluez-async"
-version = "0.1.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c434910a0ebbfce68770471d98921e1884bf9f35b242aecdd31d4a35d5bc7f9"
+checksum = "97a5250c57917dc0e5195f5beeca88d9b0a447c648f27a66297a594450bedc2d"
 dependencies = [
  "async-trait",
  "bitflags",
