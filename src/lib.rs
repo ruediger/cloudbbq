@@ -44,6 +44,7 @@ const TEMPERATURE_MIN: f32 = i16::MIN as f32 / 10.0;
 
 const DEVICE_NAMES: [&str; 2] = ["BBQ", "iBBQ"];
 
+/// An error communicating with a BBQ thermometer device.
 #[derive(Debug, Error)]
 pub enum Error {
     /// The given temperature could not be encoded because it is too high or too low.
@@ -254,9 +255,11 @@ pub enum TemperatureUnit {
     Fahrenheit,
 }
 
-#[derive(Clone, Debug)]
+/// A data point from a BBQ device, giving the temperature of all connected probes.
+#[derive(Clone, Debug, PartialEq)]
 pub struct RealTimeData {
-    /// The current temperature of each probe in Celcius, or None if the probe is disconnected.
+    /// The current temperature of each probe in degrees Celcius, or None if the probe is
+    /// disconnected.
     pub probe_temperatures: Vec<Option<f32>>,
 }
 
@@ -281,6 +284,7 @@ impl RealTimeData {
     }
 }
 
+/// A response to some command sent to the device, or a notification.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum SettingResult {
     /// A confirmation that the given command has been received.
