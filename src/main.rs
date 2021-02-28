@@ -1,5 +1,5 @@
 use bluez_async::BluetoothSession;
-use cloudbbq2::{find_devices, BBQDevice, TemperatureUnit};
+use cloudbbq::{find_devices, BBQDevice, TemperatureUnit};
 use futures::select;
 use futures::stream::StreamExt;
 use std::time::Duration;
