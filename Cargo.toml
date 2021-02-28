@@ -1,5 +1,5 @@
 [package]
-name = "cloudbbq2"
+name = "cloudbbq"
 version = "0.1.0"
 authors = ["Rüdiger Sonderfeld <ruediger@c-plusplus.net>", "Andrew Walbran <qwandor@google.com>"]
 license = "MIT OR Apache-2.0"
