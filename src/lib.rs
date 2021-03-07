@@ -144,7 +144,7 @@ impl BBQDevice {
 
     /// Set the desired temperature range for the given temperature probe. If the temperature goes
     /// outside the given range then the device will sound an alarm.
-    async fn set_target_range(&self, probe: u8, range: Range<f32>) -> Result<(), Error> {
+    pub async fn set_target_range(&self, probe: u8, range: Range<f32>) -> Result<(), Error> {
         let bottom_bytes = encode_temperature(range.start)?;
         let top_bytes = encode_temperature(range.end)?;
         let value = [
