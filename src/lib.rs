@@ -303,7 +303,7 @@ impl RealTimeData {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum SettingResult {
     /// A confirmation that the given command has been received.
-    AcknowledgeCommand { command_id: u8 },
+    AcknowledgeCommand { command_id: u8, success: bool },
     /// The current battery level of the device.
     BatteryLevel {
         current_voltage: u16,
@@ -321,9 +321,13 @@ impl SettingResult {
         }
         match value[0] {
             ACKNOWLEDGE_COMMAND => {
-                assert!(value[2..] == [0, 0, 0, 0]);
+                let success = value[2..] == [0, 0, 0, 0];
+                if !success && value[2..] != [5, 0, 0, 0] {
+                    info!("Unrecognised acknowledge: {:?}", value);
+                }
                 Some(SettingResult::AcknowledgeCommand {
                     command_id: value[1],
+                    success,
                 })
             }
             BATTERY_LEVEL_PROPERTY_ID => Some(SettingResult::BatteryLevel {
@@ -389,10 +393,24 @@ mod tests {
     }
 
     #[test]
-    fn parse_setting_result_acknowledge() {
+    fn parse_setting_result_acknowledge_success() {
         assert_eq!(
             SettingResult::try_parse(&[0xFF, 0x02, 0x00, 0x00, 0x00, 0x00]),
-            Some(SettingResult::AcknowledgeCommand { command_id: 0x02 })
+            Some(SettingResult::AcknowledgeCommand {
+                command_id: 0x02,
+                success: true
+            })
+        );
+    }
+
+    #[test]
+    fn parse_setting_result_acknowledge_invalid_probe() {
+        assert_eq!(
+            SettingResult::try_parse(&[0xFF, 0x01, 0x05, 0x00, 0x00, 0x00]),
+            Some(SettingResult::AcknowledgeCommand {
+                command_id: SET_TARGET_TEMP_COMMAND,
+                success: false
+            })
         );
     }
 
