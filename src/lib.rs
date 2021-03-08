@@ -41,7 +41,10 @@ const ACKNOWLEDGE_COMMAND: u8 = 0xFF;
 const ABSENT_PROBE_VALUE: f32 = -1.0;
 /// This temperature value is used for the bottom of the target range to indicate that there is no
 /// desired minimum temperature.
-const TARGET_TEMP_NONE: f32 = -300.0;
+const TARGET_TEMP_NO_MINIMUM: f32 = -300.0;
+/// This temperature value is used for the top of the range to indicate that there is no desired
+/// maximum temperature, to remove the target setting entirely.
+const TARGET_TEMP_NO_MAXIMUM: f32 = 302.0;
 /// The maximum temperature which can be encoded in the fixed-point format used by the device.
 const TEMPERATURE_MAX: f32 = i16::MAX as f32 / 10.0;
 /// The minimum temperature which can be encoded in the fixed-point format used by the device.
@@ -169,7 +172,14 @@ impl BBQDevice {
     /// Set the target temperature for the given temperature probe. Once the temperature goes above
     /// the given value the device will sound an alarm.
     pub async fn set_target_temp(&self, probe: u8, target: f32) -> Result<(), Error> {
-        self.set_target_range(probe, TARGET_TEMP_NONE..target).await
+        self.set_target_range(probe, TARGET_TEMP_NO_MINIMUM..target)
+            .await
+    }
+
+    /// Remove the target temperature setting for the given temperature probe.
+    pub async fn remove_target(&self, probe: u8) -> Result<(), Error> {
+        self.set_target_range(probe, TARGET_TEMP_NO_MINIMUM..TARGET_TEMP_NO_MAXIMUM)
+            .await
     }
 
     /// Enable or disable the device from sending real-time temperature data from its probes.
