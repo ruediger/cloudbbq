@@ -37,9 +37,14 @@ const BATTERY_LEVEL_PROPERTY_ID: u8 = 0x24;
 const ACKNOWLEDGE_COMMAND: u8 = 0xFF;
 
 // Special temperature values.
+/// This temperature reading value indicates that there is no probe connected.
 const ABSENT_PROBE_VALUE: f32 = -1.0;
+/// This temperature value is used for the bottom of the target range to indicate that there is no
+/// desired minimum temperature.
 const TARGET_TEMP_NONE: f32 = -300.0;
+/// The maximum temperature which can be encoded in the fixed-point format used by the device.
 const TEMPERATURE_MAX: f32 = i16::MAX as f32 / 10.0;
+/// The minimum temperature which can be encoded in the fixed-point format used by the device.
 const TEMPERATURE_MIN: f32 = i16::MIN as f32 / 10.0;
 
 const DEVICE_NAMES: [&str; 2] = ["BBQ", "iBBQ"];
