@@ -1,5 +1,6 @@
 use bluez_async::BluetoothSession;
 use cloudbbq::{find_devices, BBQDevice, TemperatureUnit};
+use eyre::Report;
 use futures::select;
 use futures::stream::StreamExt;
 use std::time::Duration;
@@ -9,7 +10,9 @@ const SCAN_DURATION: Duration = Duration::from_secs(5);
 const WAIT_DURATION: Duration = Duration::from_secs(5);
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), Report> {
+    pretty_env_logger::init();
+
     let (_, bt_session) = BluetoothSession::new().await?;
     bt_session.start_discovery().await?;
     time::sleep(SCAN_DURATION).await;
