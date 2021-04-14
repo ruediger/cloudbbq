@@ -25,14 +25,16 @@ const CREDENTIAL_MSG: [u8; 15] = [
 // Possible values for the first byte of 'setting data'.
 const SET_TARGET_TEMP_COMMAND: u8 = 0x01;
 const SET_UNIT_COMMAND: u8 = 0x02;
-const REAL_TIME_DATA_COMMAND: u8 = 0x0B;
+const SILENCE_COMMAND: u8 = 0x04;
 const REQUEST_PROPERTY_COMMAND: u8 = 0x08;
+const REAL_TIME_DATA_COMMAND: u8 = 0x0B;
 
 const UNITS_CELCIUS_ARGUMENT: u8 = 0x00;
 const UNITS_FAHRENHEIT_ARGUMENT: u8 = 0x01;
 
+const SILENCE_ARGUMENT: u8 = 0xff;
+
 // Possible values for the first byte of the 'setting result'.
-const SILENCE_PRESSED: u8 = 0x04;
 const BATTERY_LEVEL_PROPERTY_ID: u8 = 0x24;
 const ACKNOWLEDGE_COMMAND: u8 = 0xFF;
 
@@ -207,6 +209,14 @@ impl BBQDevice {
             .await
     }
 
+    /// Silence the alarm, if it is currently beeping.
+    pub async fn silence_alarm(&self) -> Result<(), BluetoothError> {
+        let command = [SILENCE_COMMAND, SILENCE_ARGUMENT, 0, 0, 0, 0];
+        self.bt_session
+            .write_characteristic_value(&self.setting_data_characteristic, command)
+            .await
+    }
+
     /// Get a stream of real time data from the device.
     ///
     /// You must also call `enable_real_time_data(true)` to actually get some data.
@@ -334,8 +344,8 @@ impl SettingResult {
                 current_voltage: u16::from_le_bytes(value[1..=2].try_into().unwrap()),
                 max_voltage: u16::from_le_bytes(value[3..=4].try_into().unwrap()),
             }),
-            SILENCE_PRESSED => {
-                assert!(value[1..] == [0xFF, 0, 0, 0, 0]);
+            SILENCE_COMMAND => {
+                assert!(value[1..] == [SILENCE_ARGUMENT, 0, 0, 0, 0]);
                 Some(SettingResult::SilencePressed)
             }
             _ => {
