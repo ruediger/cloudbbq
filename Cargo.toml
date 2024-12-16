@@ -20,4 +20,4 @@ uuid = "1.11.0"
 [dev-dependencies]
 eyre = "0.6.12"
 pretty_env_logger = "0.5.0"
-tokio = { version = "1.18.4", features = ["macros", "rt", "rt-multi-thread"] }
+tokio = { version = "1.29.1", features = ["macros", "rt", "rt-multi-thread"] }
