@@ -11,7 +11,7 @@ keywords = ["bbq", "ble", "bluetooth", "temperature", "thermometer"]
 categories = ["hardware-support"]
 
 [dependencies]
-bluez-async = "0.7.0"
+bluez-async = "0.8.0"
 futures = "0.3.25"
 log = "0.4.22"
 thiserror = "2.0.7"
